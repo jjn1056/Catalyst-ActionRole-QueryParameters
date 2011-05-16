@@ -112,11 +112,15 @@ string version of the QueryParam value with the following:
     ## configuration approach, richer Perl data structure
     __PACKAGE__->config(
       action => {
-        first_page => { Path => 'foo', QueryParam => ['page','==','1'] },
+        first_page => { Path => 'foo', QueryParam => [['page','==','1']] },
       },
     );
 
 If you are using the configuration approach, this second option is preferred.
+Please note that since each attribute or configuration key can have an array
+of values, if you use the 'rich Perl data structure' approach in your
+configuration you will need to place the arrayref inside an arrayref as in the
+example above (that is not a typo!)
 
 # NOTE REGARDING CATALYST DISPATCH RESOLUTION
 

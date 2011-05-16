@@ -17,12 +17,14 @@ around 'match', sub {
   if(my @attrs = $self->_resolve_query_attrs) {
 
     my @matched = grep { $_ } map {
-      my ($not, $attr_param, $op, $cond) = ($_=~m/^(\!?)([^\:]+)\:?(==|eq|!=|<=|>=|>|<|gt|ge|lt|le)?(.*)$/);
+      my ($not, $attr_param, $op, $cond)
+        = ref($_) eq 'ARRAY' ? (0, @$_) : ($_=~m/^(\!?)([^\:]+)\:?(==|eq|!=|<=|>=|>|<|gt|ge|lt|le)?(.*)$/);
+
       my $req_param = $ctx->req->query_parameters->{$attr_param};
 
       if($ctx->debug) {
         $ctx->log->debug(
-          sprintf "QueryParam value parsed as: %s %s %s %s",
+          sprintf "QueryParam value for $self parsed as: %s %s %s %s",
             ($not ? 'not' : 'is'), $attr_param, ($op ? $op:''), ($cond ? $cond:''),
         );
       }
@@ -166,11 +168,15 @@ string version of the QueryParam value with the following:
     ## configuration approach, richer Perl data structure
     __PACKAGE__->config(
       action => {
-        first_page => { Path => 'foo', QueryParam => ['page','==','1'] },
+        first_page => { Path => 'foo', QueryParam => [['page','==','1']] },
       },
     );
 
 If you are using the configuration approach, this second option is preferred.
+Please note that since each attribute or configuration key can have an array
+of values, if you use the 'rich Perl data structure' approach in your
+configuration you will need to place the arrayref inside an arrayref as in the
+example above (that is not a typo!)
 
 =head1 NOTE REGARDING CATALYST DISPATCH RESOLUTION
 
