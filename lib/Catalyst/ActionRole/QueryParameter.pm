@@ -17,8 +17,10 @@ around 'match', sub {
   if(my @attrs = $self->_resolve_query_attrs) {
 
     my @matched = grep { $_ } map {
-      my ($not, $attr_param, $op, $cond)
-        = ref($_) eq 'ARRAY' ? (0, @$_) : ($_=~m/^(\!?)([^\:]+)\:?(==|eq|!=|<=|>=|>|<|gt|ge|lt|le)?(.*)$/);
+      my ($not, $attr_param, $op, $cond) =
+          ref($_) eq 'ARRAY' ? 
+          ($_[0] eq '!' ? (@$_) :(0, @$_)) : 
+          ($_=~m/^(\!?)([^\:]+)\:?(==|eq|!=|<=|>=|>|<|gt|ge|lt|le)?(.*)$/);
 
       my $req_param = $ctx->req->query_parameters->{$attr_param};
 
@@ -169,6 +171,7 @@ string version of the QueryParam value with the following:
     __PACKAGE__->config(
       action => {
         first_page => { Path => 'foo', QueryParam => [['page','==','1']] },
+        no_page_query => { Path => 'foo', QueryParam => [['!','page']] },
       },
     );
 

@@ -113,6 +113,7 @@ string version of the QueryParam value with the following:
     __PACKAGE__->config(
       action => {
         first_page => { Path => 'foo', QueryParam => [['page','==','1']] },
+        no_page_query => { Path => 'foo', QueryParam => [['!','page']] },
       },
     );
 
