@@ -17,9 +17,27 @@ around 'match', sub {
   if(my @attrs = $self->_resolve_query_attrs) {
 
     my @matched = grep { $_ } map {
-      my ($not, $attr_param) = ($_=~m/^(\!?)(.+)$/);
+      my ($not, $attr_param, $op, $cond) = ($_=~m/^(\!?)([^\:]+)\:?(==|eq|!=|<=|>=|>|<|gt|ge|lt|le)?(.*)$/);
       my $req_param = $ctx->req->query_parameters->{$attr_param};
-      $not ?!$req_param : $req_param;
+
+      if($ctx->debug) {
+        $ctx->log->debug(
+          sprintf "QueryParam value parsed as: %s %s %s %s",
+            ($not ? 'not' : 'is'), $attr_param, ($op ? $op:''), ($cond ? $cond:''),
+        );
+      }
+
+      if($req_param && $op && $cond) {
+        my $evaluated;
+        my $success = eval "\$evaluated = $req_param $op $cond; 1";
+        if($success) {
+            $not ?! $evaluated : $evaluated;
+        } else {
+            undef;
+        }
+      } else {
+        $not ?!$req_param : $req_param;
+      }
     } @attrs;
 
     if( scalar(@matched) == scalar(@attrs) ) {
@@ -79,8 +97,46 @@ howver I find there is a limited and controlled subset of use cases where this
 feature is be valuable.  As a result, the features of this ActionRole are
 also currently limited to simple defined or undefined checking.
 
+You can specify multiple QueryParam per action.  If you do have more than one
+we will try to match actions that match ALL the given QueryParam attributes.
+
 There's a functioning L<Catalyst> example application in the test directory for
 your review as well.
+
+=head1 QUERY PARAMETER CONDITION MATCHING
+
+The value of the QueryParam attribute allows for more complex condition
+matching.  For example, you can match for a particular value or if a given
+value is greater than another.  This can be useful when you want to perform
+a different action when (for example) your user is on page 10 of their search
+(which might indicate they are not finding what they want and could use some
+additional help).
+
+Here are some example QueryParam attributes and their matches:
+
+    QueryParam('page')  ## 'page' must exist
+    QueryParam('!page')  ## 'page' must NOT exist
+    QueryParam('page:==1')  ## 'page' must equal numeric one
+    QueryParam('page:>1')  ## 'page' must be great than one
+    QueryParam('!page:>1')  ## 'page' must NOT be great than one
+
+Since as I mentioned, it is generally not awesome web development practice to
+make excessive use of query parameters for mapping your action logic, so I have
+limited the condition matching to basic Perl operators.  The general pattern
+is as follows:
+
+    (!?)($parameter):?($condition?)
+
+Which can be roughly translated as "A $parameter should match the $condition
+but we can tack a "!" to the front of the expression to reverse the match.  If
+you don't specify a $condition, the default condition is definedness."
+
+A $condition is basically a Perl relational operator followed by a value.
+Relation Operators we current support: C<< ==,eq,>,<,!=,<=,>=,gt,ge,lt,le >>.
+For documentation on Perl Relational Operators see: C<perldoc perlop>.
+
+The condition will be wrapped in an C<eval>) and any exceptions generated will
+be taken to mean the pattern has not matched.
 
 =head1 NOTE REGARDING CATALYST DISPATCH RESOLUTION
 
@@ -139,7 +195,7 @@ John Napiorkowski L<email:jjnapiork@cpan.org>
 
 =head1 SEE ALSO
 
-L<Catalyst>, L<Catalyst::Controller::ActionRole>, L<Moose>.
+L<Catalyst>, L<Catalyst::Controller::ActionRole>, L<Moose>, L<Try::Tiny>.
 
 =head1 COPYRIGHT & LICENSE
 

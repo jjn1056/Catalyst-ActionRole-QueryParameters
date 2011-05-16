@@ -18,4 +18,10 @@ is request(GET '/chained?row=100')->content, 'row';
 is request(GET '/chained?page=100&row=100')->content, 'page_and_row';
 is request(GET '/chained')->content, 'no_query';
 
+is request(GET '/conditions?page=1')->content, 'is_one';
+is request(GET '/conditions?page=100')->content, 'more_than_one';
+is request(GET '/conditions?page=200')->content, 'equal_or_greater_200';
+is request(GET '/conditions?page=200')->content, 'equal_or_greater_200';
+is request(GET '/conditions')->content, 'no_query';
+
 done_testing;
