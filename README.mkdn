@@ -1,6 +1,6 @@
 # NAME
 
-Catalyst::ActionRole::MatchRequestAccepts - Dispatch actions based on HTTP Accept Header
+Catalyst::ActionRole::QueryParameter - Dispatch rules using query parameters
 
 # SYNOPSIS
 
@@ -13,152 +13,97 @@ Catalyst::ActionRole::MatchRequestAccepts - Dispatch actions based on HTTP Accep
       extends 'Catalyst::Controller::ActionRole';
     }
 
-    ## Add the ActionRole to all the Controller's actions.  You can also 
+    ## Add the ActionRole to all the Controller's actions.  You can also
     ## selectively add the ActionRole with the :Does action attribute or in
     ## controller configuration.  See Catalyst::Controller::ActionRole for
     ## more information.
 
     __PACKAGE__->config(
-      action_roles => ['MatchRequestAccepts'],
+      action_roles => ['QueryParameter'],
     );
 
-    ## Match for incoming requests with HTTP Accepts: plain/html
-    sub for_html : Path('foo') Accept('plain/html') { ... }
+    ## Match an incoming request matching "http://myhost/path?page"
+    sub paged_results : Path('foo') QueryParam('page') { ... }
 
-    ## Match for incoming requests with HTTP Accepts: application/json
-    sub for_json : Path('foo') Accept('application/json') { ... }
+    ## Match an incoming request matching "http://myhost/path"
+    sub no_paging : Path('foo') QueryParam('!page') { ... }
 
 # DESCRIPTION
 
-Lets you specify a match for the HTTP `Accept` Header, which is provided by
-the [Catalyst](http://search.cpan.org/perldoc?Catalyst) `$ctx->request->headers` object.  You might wish to instead
-look at [Catalyst::Action::REST](http://search.cpan.org/perldoc?Catalyst::Action::REST) if you are doing complex applications that
-match different incoming request types, but if you are very fussy about how
-your actions match, or if you are doing some simple ajaxy bits you might like
-to use this instead of a full on package (like [Catalyst::Action::REST](http://search.cpan.org/perldoc?Catalyst::Action::REST) is.)
+Let's you require conditions on request query parameters (as you would access
+via `$ctx->request->query_parameters`) as part of your dispatch matching.
+This ActionRole is not intended to be used for general HTML form and parameter
+processing or validation, for that purpose there are many other options (such
+as L<HTML::FormHandler, [Data::Manager](http://search.cpan.org/perldoc?Data::Manager) or <HTML::FormFu>.)  What it can be
+useful for is when you want to delegate work to various Actions inside your
+Controller based on what the incoming query parameters say.
 
-Currently the match performed is a pure equalty, no attempt to guess or infer
-matches based on similarity are done.  If you need to match several variations
-you can specify all the variations with multiple attribute declarations.  Right
-now we don't support expression based matching, such as `text/*`, although
-adding such would probably not be very hard (although I don't want to make the
-logic here slow down our dispatch matching too much).
-
-Please note that if you specify multiple `Accept` attributes on a single
-action, those will be matched via an OR condition and not an AND condition.  In
-other words we short circuit match the first action with at least one of the
-`Accept` values appearing in the requested HTTP headers.  I think this is
-correct since I imagine the purpose of multiple `Accept` attributes would be
-to match several acceptable variations of a given type, not to match any of
-several unrelated types.  However if you have a use case for this please let
-me know.
-
-If an action consumes this role, but no `Accept` attributes are found, the
-action will simple accept all types.
-
-For debugging purposes, if the [Catalyst](http://search.cpan.org/perldoc?Catalyst) debug flag is enabled, you can
-override the HTTP Accept header with the `http-accept` query parameter.  This
-makes it easy to force detect in testing or in your browser.  This feature is
-NOT available when the debug flag is off.
-
-Also, as usual you can specify attributes and information in th configuration
-of your [Catalyst::Controller](http://search.cpan.org/perldoc?Catalyst::Controller) subclass:
-
-    ## Set the 'our_action_json' action to consume this ActionRole.  In this
-    ## example GET '/json' would only match if the client request HTTP included
-    ## an Accept: application/json.
-
-    __PACKAGE__->config(
-      action_roles => ['MatchRequestAccepts'],
-      action => {
-        our_action_json => { Path => 'json', Accept => 'application/json' },
-      });
-
-    ## GET '/foo' will dispatch to either action 'our_action_json' or action
-    ## 'our_action_html' depending on the incoming HTTP Accept.
-
-    __PACKAGE__->config(
-      action => {
-        our_action_json => {
-          Does => 'MatchRequestAccepts',
-          Path => 'foo',
-          Accept => 'application/json',
-        },
-        our_action_html => {
-          Does => 'MatchRequestAccepts',
-          Path => 'foo',
-          Accept => 'text/html',
-        },
-      });
+Generally speaking, its not great form to abuse query parameters this way,
+howver I find there is a limited and controlled subset of use cases where this
+feature is be valuable.  As a result, the features of this ActionRole are
+also currently limited to simple defined or undefined checking.
 
 There's a functioning [Catalyst](http://search.cpan.org/perldoc?Catalyst) example application in the test directory for
 your review as well.
 
-# EXAMPLE WITH CHAINED ACTIONS
+# NOTE REGARDING CATALYST DISPATCH RESOLUTION
 
-The following example uses [Catalyst](http://search.cpan.org/perldoc?Catalyst) chaining to match one of two different
-types of `Accept` headers, and to return the correct HTTP error message if
-nothing is matched.  This is probably my most common use pattern.
+When several actions match the path of an incoming request, such as in the
+following example:
 
-    package MyApp::Web::Controller::Chained;
-
-    use Moose;
-    use namespace::autoclean;
-
-    BEGIN {
-      extends 'Catalyst::Controller::ActionRole';
+    sub no_query : Path('foo') {
+      my ($self, $ctx) = @_;
+      $ctx->response->body('no_query');
     }
 
-    __PACKAGE__->config(
-      action_roles => ['MatchRequestAccepts'],
-    );
+    sub page : Path('foo') QueryParam('page') {
+      my ($self, $ctx) = @_;
+      $ctx->response->body('page');
+    }
 
-    sub root : Chained('/') PathPrefix CaptureArgs(0) {}
+[Catayst](http://search.cpan.org/perldoc?Catayst) will call the `match` method on each in turn until it finds one
+that returns a successful match.  This matching process starts from the
+bottom up (or last to first), which means that you should place your most
+specific matches at the bottom and your least specific or 'catch all' actions
+at the top.
 
-      sub text_html
-        : Chained('root') PathPart('') Accept('text/html') Args(0)
-      {
-        my ($self, $ctx) = @_;
-        $ctx->response->body('text_html');
-      }
+HOWEVER, if you are using Chained actions [Catalyst::DispatchType::Chained](http://search.cpan.org/perldoc?Catalyst::DispatchType::Chained)
+then the order resolution is REVERSED from the above example.  In other words
+we start with the first action and proceed downwards.  This means that when you
+are Chaining, you should place you most specific matches FIRST (nearest the top
+of the Controller file) and least specific or default actions LAST.
 
-      sub json
-        : Chained('root') PathPart('') Accept('application/json') Args(0)
-      {
-        my ($self, $ctx) = @_;
-        $ctx->response->body('json');
-      }
+For example:
 
-      sub not_accepted
-        : Chained('root') PathPart('') Args
-      {
-        my ($self, $ctx) = @_;
-        $ctx->response->status(406);
-        $ctx->response->body('error_not_accepted');
-      }
+sub root : Chained('/') PathPrefix CaptureArgs(0) {}
 
-    __PACKAGE__->meta->make_immutable;
+  sub page_and_row
+  : Chained('root') PathPart('') QueryParam('page') QueryParam('row') Args(0)
+  {
+    my ($self, $ctx) = @_;
+    $ctx->response->body('page_and_row');
+  }
 
-In the given example, a `GET` request to `http://www.myapp.com/chained` will
-match for `Accept` values of HTML and JSON, and will return a status 406 error
-to all other requests.
+  sub page : Chained('root') PathPart('')  QueryParam('page') Args(0)  {
+    my ($self, $ctx) = @_;
+    $ctx->response->body('page');
+  }
+
+  sub no_query : Chained('root') PathPart('') Args(0)  {
+    my ($self, $ctx) = @_;
+    $ctx->response->body('no_query');
+  }
+
+
+
+The test suite has a working example of this for your review.
 
 # AUTHOR
 
 John Napiorkowski L<email:jjnapiork@cpan.org>
 
-# THANKS
-
-Shout out to Florian Ragwitz <rafl@debian.org> for providing such a great
-example in [Catalyst::ActionRole::MatchRequestMethod](http://search.cpan.org/perldoc?Catalyst::ActionRole::MatchRequestMethod).  Source code and tests
-are pretty much copied from his stuff.
-
-I also cargo culted a chuck of code from [Catalyst::TraitFor::Request::REST](http://search.cpan.org/perldoc?Catalyst::TraitFor::Request::REST)
-which let me parse HTTP Accept lines.
-
 # SEE ALSO
 
-[Catalyst::ActionRole::MatchRequestMethod](http://search.cpan.org/perldoc?Catalyst::ActionRole::MatchRequestMethod), [Catalyst::Action::REST](http://search.cpan.org/perldoc?Catalyst::Action::REST),
 [Catalyst](http://search.cpan.org/perldoc?Catalyst), [Catalyst::Controller::ActionRole](http://search.cpan.org/perldoc?Catalyst::Controller::ActionRole), [Moose](http://search.cpan.org/perldoc?Moose).
 
 # COPYRIGHT & LICENSE
