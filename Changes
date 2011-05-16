@@ -1,4 +1,8 @@
 Revision history for Perl extension Catalyst::ActionRole::QueryParameter
 
+0.02    16 May 2011
+        - Fixed broken matching on alphabetic values in query params and a bit
+          of documentation enhancements.
+
 0.01    15 May 2011
         - original version.
