@@ -99,11 +99,11 @@ as L<HTML::FormHandler>, L<Data::Manager> or <HTML::FormFu>.)  What it can be
 useful for is when you want to delegate work to various Actions inside your
 Controller based on what the incoming query parameters say.
 
-Generally speaking, its not great form to abuse query parameters this way,
-however I find there is a limited and controlled subset of use cases where this
-feature is valuable.  As a result, the features of this ActionRole are  also
-currently limited to simple defined or undefined checking, and basic Perl
-relational operators.
+Generally speaking, it is not great development practice to abuse query
+parameters this way.  However I find there is a limited and controlled subset
+of use cases where this feature is valuable.  As a result, the features of this
+ActionRole are  also limited to simple defined or undefined checking, and basic
+Perl relational operators.
 
 You can specify multiple C<QueryParam>s per Action.  If you do have more than
 one we will try to match Actions that match ALL the given C<QueryParam>
@@ -216,24 +216,24 @@ of the Controller file) and least specific or default actions LAST.
 
 For example:
 
-sub root : Chained('/') PathPrefix CaptureArgs(0) {}
+    sub root : Chained('/') PathPrefix CaptureArgs(0) {}
 
-    sub page_and_row
-    : Chained('root') PathPart('') QueryParam('page') QueryParam('row') Args(0)
-    {
-      my ($self, $ctx) = @_;
-      $ctx->response->body('page_and_row');
-    }
+      sub page_and_row
+      : Chained('root') PathPart('') QueryParam('page') QueryParam('row') Args(0)
+      {
+        my ($self, $ctx) = @_;
+        $ctx->response->body('page_and_row');
+      }
 
-    sub page : Chained('root') PathPart('')  QueryParam('page') Args(0)  {
-      my ($self, $ctx) = @_;
-      $ctx->response->body('page');
-    }
+      sub page : Chained('root') PathPart('')  QueryParam('page') Args(0)  {
+        my ($self, $ctx) = @_;
+        $ctx->response->body('page');
+      }
 
-    sub no_query : Chained('root') PathPart('') Args(0)  {
-      my ($self, $ctx) = @_;
-      $ctx->response->body('no_query');
-    }
+      sub no_query : Chained('root') PathPart('') Args(0)  {
+        my ($self, $ctx) = @_;
+        $ctx->response->body('no_query');
+      }
 
 
 The test suite has a working example of this for your review.
