@@ -105,8 +105,9 @@ feature is valuable.  As a result, the features of this ActionRole are  also
 currently limited to simple defined or undefined checking, and basic Perl
 relational operators.
 
-You can specify multiple QueryParam per Action.  If you do have more than one
-we will try to match Actions that match ALL the given QueryParam attributes.
+You can specify multiple C<QueryParam>s per Action.  If you do have more than
+one we will try to match Actions that match ALL the given C<QueryParam>
+attributes.
 
 There's a functioning L<Catalyst> example application in the test directory for
 your review as well.
@@ -125,7 +126,7 @@ Although you can handle this with conditional logic inside your Action, I find
 the ability to declare what I want from an Action to be one of the more valuable
 aspects of L<Catalyst>.
 
-Here are some example C<QueryParam> attributes and the queries they matchs:
+Here are some example C<QueryParam> attributes and the queries they match:
 
     QueryParam('page')  ## 'page' must exist
     QueryParam('!page')  ## 'page' must NOT exist
@@ -217,22 +218,22 @@ For example:
 
 sub root : Chained('/') PathPrefix CaptureArgs(0) {}
 
-  sub page_and_row
-  : Chained('root') PathPart('') QueryParam('page') QueryParam('row') Args(0)
-  {
-    my ($self, $ctx) = @_;
-    $ctx->response->body('page_and_row');
-  }
+    sub page_and_row
+    : Chained('root') PathPart('') QueryParam('page') QueryParam('row') Args(0)
+    {
+      my ($self, $ctx) = @_;
+      $ctx->response->body('page_and_row');
+    }
 
-  sub page : Chained('root') PathPart('')  QueryParam('page') Args(0)  {
-    my ($self, $ctx) = @_;
-    $ctx->response->body('page');
-  }
+    sub page : Chained('root') PathPart('')  QueryParam('page') Args(0)  {
+      my ($self, $ctx) = @_;
+      $ctx->response->body('page');
+    }
 
-  sub no_query : Chained('root') PathPart('') Args(0)  {
-    my ($self, $ctx) = @_;
-    $ctx->response->body('no_query');
-  }
+    sub no_query : Chained('root') PathPart('') Args(0)  {
+      my ($self, $ctx) = @_;
+      $ctx->response->body('no_query');
+    }
 
 
 The test suite has a working example of this for your review.
@@ -243,7 +244,7 @@ John Napiorkowski L<email:jjnapiork@cpan.org>
 
 =head1 SEE ALSO
 
-L<Catalyst>, L<Catalyst::Controller::ActionRole>, L<Moose>, L<Try::Tiny>.
+L<Catalyst>, L<Catalyst::Controller::ActionRole>, L<Moose>.
 
 =head1 COPYRIGHT & LICENSE
 

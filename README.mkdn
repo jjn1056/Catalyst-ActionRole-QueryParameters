@@ -44,8 +44,9 @@ feature is valuable.  As a result, the features of this ActionRole are  also
 currently limited to simple defined or undefined checking, and basic Perl
 relational operators.
 
-You can specify multiple QueryParam per Action.  If you do have more than one
-we will try to match Actions that match ALL the given QueryParam attributes.
+You can specify multiple `QueryParam`s per Action.  If you do have more than
+one we will try to match Actions that match ALL the given `QueryParam`
+attributes.
 
 There's a functioning [Catalyst](http://search.cpan.org/perldoc?Catalyst) example application in the test directory for
 your review as well.
@@ -64,7 +65,7 @@ Although you can handle this with conditional logic inside your Action, I find
 the ability to declare what I want from an Action to be one of the more valuable
 aspects of [Catalyst](http://search.cpan.org/perldoc?Catalyst).
 
-Here are some example `QueryParam` attributes and the queries they matchs:
+Here are some example `QueryParam` attributes and the queries they match:
 
     QueryParam('page')  ## 'page' must exist
     QueryParam('!page')  ## 'page' must NOT exist
@@ -156,22 +157,22 @@ For example:
 
 sub root : Chained('/') PathPrefix CaptureArgs(0) {}
 
-  sub page_and_row
-  : Chained('root') PathPart('') QueryParam('page') QueryParam('row') Args(0)
-  {
-    my ($self, $ctx) = @_;
-    $ctx->response->body('page_and_row');
-  }
+    sub page_and_row
+    : Chained('root') PathPart('') QueryParam('page') QueryParam('row') Args(0)
+    {
+      my ($self, $ctx) = @_;
+      $ctx->response->body('page_and_row');
+    }
 
-  sub page : Chained('root') PathPart('')  QueryParam('page') Args(0)  {
-    my ($self, $ctx) = @_;
-    $ctx->response->body('page');
-  }
+    sub page : Chained('root') PathPart('')  QueryParam('page') Args(0)  {
+      my ($self, $ctx) = @_;
+      $ctx->response->body('page');
+    }
 
-  sub no_query : Chained('root') PathPart('') Args(0)  {
-    my ($self, $ctx) = @_;
-    $ctx->response->body('no_query');
-  }
+    sub no_query : Chained('root') PathPart('') Args(0)  {
+      my ($self, $ctx) = @_;
+      $ctx->response->body('no_query');
+    }
 
 
 
@@ -183,7 +184,7 @@ John Napiorkowski L<email:jjnapiork@cpan.org>
 
 # SEE ALSO
 
-[Catalyst](http://search.cpan.org/perldoc?Catalyst), [Catalyst::Controller::ActionRole](http://search.cpan.org/perldoc?Catalyst::Controller::ActionRole), [Moose](http://search.cpan.org/perldoc?Moose), [Try::Tiny](http://search.cpan.org/perldoc?Try::Tiny).
+[Catalyst](http://search.cpan.org/perldoc?Catalyst), [Catalyst::Controller::ActionRole](http://search.cpan.org/perldoc?Catalyst::Controller::ActionRole), [Moose](http://search.cpan.org/perldoc?Moose).
 
 # COPYRIGHT & LICENSE
 
