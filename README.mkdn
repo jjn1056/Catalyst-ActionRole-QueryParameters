@@ -34,7 +34,7 @@ Let's you require conditions on request query parameters (as you would access
 via `$ctx->request->query_parameters`) as part of your dispatch matching.
 This ActionRole is not intended to be used for general HTML form and parameter
 processing or validation, for that purpose there are many other options (such
-as L<HTML::FormHandler, [Data::Manager](http://search.cpan.org/perldoc?Data::Manager) or <HTML::FormFu>.)  What it can be
+as [HTML::FormHandler](http://search.cpan.org/perldoc?HTML::FormHandler), [Data::Manager](http://search.cpan.org/perldoc?Data::Manager) or <HTML::FormFu>.)  What it can be
 useful for is when you want to delegate work to various Actions inside your
 Controller based on what the incoming query parameters say.
 
