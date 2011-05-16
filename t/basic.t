@@ -23,5 +23,6 @@ is request(GET '/conditions?page=100')->content, 'more_than_one';
 is request(GET '/conditions?page=200')->content, 'equal_or_greater_200';
 is request(GET '/conditions?page=200')->content, 'equal_or_greater_200';
 is request(GET '/conditions')->content, 'no_query';
+is request(GET '/conditions?page=AAAA')->content, 'no_query';
 
 done_testing;

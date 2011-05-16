@@ -39,9 +39,10 @@ useful for is when you want to delegate work to various Actions inside your
 Controller based on what the incoming query parameters say.
 
 Generally speaking, its not great form to abuse query parameters this way,
-howver I find there is a limited and controlled subset of use cases where this
+however I find there is a limited and controlled subset of use cases where this
 feature is be valuable.  As a result, the features of this ActionRole are
-also currently limited to simple defined or undefined checking.
+also currently limited to simple defined or undefined checking, and basic Perl
+relational operators.
 
 You can specify multiple QueryParam per action.  If you do have more than one
 we will try to match actions that match ALL the given QueryParam attributes.
@@ -54,11 +55,14 @@ your review as well.
 The value of the QueryParam attribute allows for more complex condition
 matching.  For example, you can match for a particular value or if a given
 value is greater than another.  This can be useful when you want to perform
-a different action when (for example) your user is on page 10 of their search
+a different Action when (for example) your user is on page 10 of their search
 (which might indicate they are not finding what they want and could use some
-additional help).
+additional help).  I also sometimes find that I want special handling of the
+first page of a search result.  Although you can handle this with conditional
+logic inside your Action, I find the ability to declare what I want from an
+Action to be one of the more valuable aspects of [Catalyst](http://search.cpan.org/perldoc?Catalyst).
 
-Here are some example QueryParam attributes and their matches:
+Here are some example `QueryParam` attributes and their matches:
 
     QueryParam('page')  ## 'page' must exist
     QueryParam('!page')  ## 'page' must NOT exist
@@ -77,12 +81,42 @@ Which can be roughly translated as "A $parameter should match the $condition
 but we can tack a "!" to the front of the expression to reverse the match.  If
 you don't specify a $condition, the default condition is definedness."
 
-A $condition is basically a Perl relational operator followed by a value.
+A `$condition` is basically a Perl relational operator followed by a value.
 Relation Operators we current support: `==,eq,>,<,!=,<=,>=,gt,ge,lt,le`.
 For documentation on Perl Relational Operators see: `perldoc perlop`.
 
-The condition will be wrapped in an `eval`) and any exceptions generated will
+The condition will be wrapped in an `eval` and any exceptions generated will
 be taken to mean the pattern has not matched.
+
+# USING CATALYST CONFIGURATION INSTEAD OF ATTRIBUTES
+
+You may prefer to set your Query Parameter requirements via the [Catalyst](http://search.cpan.org/perldoc?Catalyst)
+general application configuration, rather than in subroutine attributes.  Doing
+so allows you to use different settings in different environments and it also
+allows you to use more extended values.  Here's an example comparing both
+approaches
+
+    ## subroutine attribute approach
+    sub first_page : Path('foo') QueryParam('page:==1') { ... }
+
+    ## configuration approach
+    __PACKAGE__->config(
+      action => {
+        first_page => { Path => 'foo', QueryParam => 'page:==1'},
+      },
+    );
+
+Since the configuration approach allows richer use of Perl, you can replace the
+string version of the QueryParam value with the following:
+
+    ## configuration approach, richer Perl data structure
+    __PACKAGE__->config(
+      action => {
+        first_page => { Path => 'foo', QueryParam => ['page','==','1'] },
+      },
+    );
+
+If you are using the configuration approach, this second option is preferred.
 
 # NOTE REGARDING CATALYST DISPATCH RESOLUTION
 
