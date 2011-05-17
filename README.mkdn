@@ -86,7 +86,9 @@ you don't specify a $condition, the default condition is definedness."
 
 A `$condition` is basically a Perl relational operator followed by a value.
 Relation Operators we current support: `==,eq,>,<,!=,<=,>=,gt,ge,lt,le`.
-For documentation on Perl Relational Operators see: `perldoc perlop`.
+In addition, we support the regular expression match operator `=~`. For
+documentation on Perl Relational Operators see: `perldoc perlop`.  For 
+documentation on Perl Regular Expressions see `perldoc perlre`.
 
 The condition will be wrapped in an `eval` and any exceptions generated will
 be taken to mean the pattern has not matched.

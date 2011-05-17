@@ -1,6 +1,6 @@
 package Catalyst::ActionRole::QueryParameter;
 
-our $VERSION = '0.02';
+our $VERSION = '0.03';
 
 use 5.008008;
 use Moose::Role;
@@ -20,7 +20,7 @@ around 'match', sub {
       my ($not, $attr_param, $op, $cond) =
           ref($_) eq 'ARRAY' ? 
           ($_[0] eq '!' ? (@$_) :(0, @$_)) : 
-          ($_=~m/^(\!?)([^\:]+)\:?(==|eq|!=|<=|>=|>|<|gt|ge|lt|le)?(.*)$/);
+          ($_=~m/^(\!?)([^\:]+)\:?(==|eq|!=|<=|>=|>|=~|<|gt|ge|lt|le)?(.*)$/);
 
       my $req_param = $ctx->req->query_parameters->{$attr_param};
 
@@ -147,7 +147,9 @@ you don't specify a $condition, the default condition is definedness."
 
 A C<$condition> is basically a Perl relational operator followed by a value.
 Relation Operators we current support: C<< ==,eq,>,<,!=,<=,>=,gt,ge,lt,le >>.
-For documentation on Perl Relational Operators see: C<perldoc perlop>.
+In addition, we support the regular expression match operator C<=~>. For
+documentation on Perl Relational Operators see: C<perldoc perlop>.  For 
+documentation on Perl Regular Expressions see C<perldoc perlre>.
 
 The condition will be wrapped in an C<eval> and any exceptions generated will
 be taken to mean the pattern has not matched.
