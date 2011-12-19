@@ -1,25 +1,27 @@
 package Catalyst::ActionRole::QueryParameter;
 
-our $VERSION = '0.03';
+our $VERSION = '0.04';
 
 use 5.008008;
 use Moose::Role;
 use namespace::autoclean;
 
-requires 'attributes';
+requires 'attributes', 'match';
 
 sub _resolve_query_attrs {
   @{shift->attributes->{QueryParam} || []};
 }
 
-around 'match', sub {
+sub match_captures { 1 }
+
+around $_, sub {
   my ($orig, $self, $ctx) = @_;
   if(my @attrs = $self->_resolve_query_attrs) {
 
     my @matched = grep { $_ } map {
       my ($not, $attr_param, $op, $cond) =
-          ref($_) eq 'ARRAY' ? 
-          ($_[0] eq '!' ? (@$_) :(0, @$_)) : 
+          ref($_) eq 'ARRAY' ?
+          ($_[0] eq '!' ? (@$_) :(0, @$_)) :
           ($_=~m/^(\!?)([^\:]+)\:?(==|eq|!=|<=|>=|>|=~|<|gt|ge|lt|le)?(.*)$/);
 
       my $req_param = $ctx->req->query_parameters->{$attr_param};
@@ -55,7 +57,7 @@ around 'match', sub {
   } else {
     return $self->$orig($ctx);
   }
-};
+} for qw(match match_captures);
 
 1;
 

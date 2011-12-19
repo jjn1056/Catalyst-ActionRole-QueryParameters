@@ -1,5 +1,8 @@
 Revision history for Perl extension Catalyst::ActionRole::QueryParameter
 
+0.04    19 December 2011
+        - support match_captures from newer version of catalyst.
+
 0.03    17 May 2011
         - More documentation tweaks
         - support =~ as a match operator.

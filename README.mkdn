@@ -182,7 +182,7 @@ The test suite has a working example of this for your review.
 
 # AUTHOR
 
-John Napiorkowski L<email:jjnapiork@cpan.org>
+John Napiorkowski [email:jjnapiork@cpan.org](email:jjnapiork@cpan.org)
 
 # SEE ALSO
 
@@ -190,7 +190,7 @@ John Napiorkowski L<email:jjnapiork@cpan.org>
 
 # COPYRIGHT & LICENSE
 
-Copyright 2011, John Napiorkowski L<email:jjnapiork@cpan.org>
+Copyright 2011, John Napiorkowski [email:jjnapiork@cpan.org](email:jjnapiork@cpan.org)
 
 This library is free software; you can redistribute it and/or modify it under
 the same terms as Perl itself.
