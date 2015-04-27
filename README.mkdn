@@ -7,11 +7,9 @@ Catalyst::ActionRole::QueryParameter - Dispatch rules using query parameters
     package MyApp::Controller::Foo;
 
     use Moose;
-    use namespace::autoclean;
+    use MooseX::MethodAttributes;
 
-    BEGIN {
-      extends 'Catalyst::Controller::ActionRole';
-    }
+    extends 'Catalyst::Controller:';
 
     ## Add the ActionRole to all the Controller's actions.  You can also
     ## selectively add the ActionRole with the :Does action attribute or in
@@ -34,7 +32,7 @@ Let's you require conditions on request query parameters (as you would access
 via `$ctx->request->query_parameters`) as part of your dispatch matching.
 This ActionRole is not intended to be used for general HTML form and parameter
 processing or validation, for that purpose there are many other options (such
-as [HTML::FormHandler](http://search.cpan.org/perldoc?HTML::FormHandler), [Data::Manager](http://search.cpan.org/perldoc?Data::Manager) or <HTML::FormFu>.)  What it can be
+as [HTML::FormHandler](https://metacpan.org/pod/HTML::FormHandler), [Data::Manager](https://metacpan.org/pod/Data::Manager) or [HTML::FormFu](https://metacpan.org/pod/HTML::FormFu).)  What it can be
 useful for is when you want to delegate work to various Actions inside your
 Controller based on what the incoming query parameters say.
 
@@ -48,7 +46,7 @@ You can specify multiple `QueryParam`s per Action.  If you do have more than
 one we will try to match Actions that match ALL the given `QueryParam`
 attributes.
 
-There's a functioning [Catalyst](http://search.cpan.org/perldoc?Catalyst) example application in the test directory for
+There's a functioning [Catalyst](https://metacpan.org/pod/Catalyst) example application in the test directory for
 your review as well.
 
 # QUERY PARAMETER CONDITION MATCHING
@@ -63,7 +61,7 @@ find that I want special handling of the first page of a search result.
 
 Although you can handle this with conditional logic inside your Action, I find
 the ability to declare what I want from an Action to be one of the more valuable
-aspects of [Catalyst](http://search.cpan.org/perldoc?Catalyst).
+aspects of [Catalyst](https://metacpan.org/pod/Catalyst).
 
 Here are some example `QueryParam` attributes and the queries they match:
 
@@ -95,7 +93,7 @@ be taken to mean the pattern has not matched.
 
 # USING CATALYST CONFIGURATION INSTEAD OF ATTRIBUTES
 
-You may prefer to set your Query Parameter requirements via the [Catalyst](http://search.cpan.org/perldoc?Catalyst)
+You may prefer to set your Query Parameter requirements via the [Catalyst](https://metacpan.org/pod/Catalyst)
 general application configuration, rather than in subroutine attributes.  Doing
 so allows you to use different settings in different environments and it also
 allows you to use more extended values.  Here's an example comparing both
@@ -143,13 +141,13 @@ following example:
       $ctx->response->body('page');
     }
 
-[Catayst](http://search.cpan.org/perldoc?Catayst) will call the `match` method on each in turn until it finds one
+[Catayst](https://metacpan.org/pod/Catayst) will call the `match` method on each in turn until it finds one
 that returns a successful match.  This matching process starts from the
 bottom up (or last to first), which means that you should place your most
 specific matches at the bottom and your least specific or 'catch all' actions
 at the top.
 
-HOWEVER, if you are using Chained actions [Catalyst::DispatchType::Chained](http://search.cpan.org/perldoc?Catalyst::DispatchType::Chained)
+HOWEVER, if you are using Chained actions [Catalyst::DispatchType::Chained](https://metacpan.org/pod/Catalyst::DispatchType::Chained)
 then the order resolution is REVERSED from the above example.  In other words
 we start with the first action and proceed downwards.  This means that when you
 are Chaining, you should place you most specific matches FIRST (nearest the top
@@ -176,8 +174,6 @@ For example:
         $ctx->response->body('no_query');
       }
 
-
-
 The test suite has a working example of this for your review.
 
 # AUTHOR
@@ -186,7 +182,7 @@ John Napiorkowski [email:jjnapiork@cpan.org](email:jjnapiork@cpan.org)
 
 # SEE ALSO
 
-[Catalyst](http://search.cpan.org/perldoc?Catalyst), [Catalyst::Controller::ActionRole](http://search.cpan.org/perldoc?Catalyst::Controller::ActionRole), [Moose](http://search.cpan.org/perldoc?Moose).
+[Catalyst](https://metacpan.org/pod/Catalyst), [Catalyst::Controller::ActionRole](https://metacpan.org/pod/Catalyst::Controller::ActionRole), [Moose](https://metacpan.org/pod/Moose).
 
 # COPYRIGHT & LICENSE
 
