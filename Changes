@@ -1,5 +1,11 @@
 Revision history for Perl extension Catalyst::ActionRole::QueryParameter
 
+0.05    27 April 2015
+        - match_captures is now always defined in Catalyst::Action so we changed
+        the role to not overwrite it.
+        - Catalyst supports ActionRoles natively in a controller for a long time
+        so updated the Minimun Catalyst version and removed previous code.
+        
 0.04    19 December 2011
         - support match_captures from newer version of catalyst.
 

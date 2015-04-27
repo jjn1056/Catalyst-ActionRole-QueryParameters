@@ -1,18 +1,16 @@
 package Catalyst::ActionRole::QueryParameter;
 
-our $VERSION = '0.04';
+our $VERSION = '0.05';
 
 use 5.008008;
 use Moose::Role;
 use namespace::autoclean;
 
-requires 'attributes', 'match';
+requires 'attributes', 'match', 'match_captures';
 
 sub _resolve_query_attrs {
   @{shift->attributes->{QueryParam} || []};
 }
-
-sub match_captures { 1 }
 
 around $_, sub {
   my ($orig, $self, $ctx) = @_;
@@ -70,11 +68,9 @@ Catalyst::ActionRole::QueryParameter - Dispatch rules using query parameters
     package MyApp::Controller::Foo;
 
     use Moose;
-    use namespace::autoclean;
+    use MooseX::MethodAttributes;
 
-    BEGIN {
-      extends 'Catalyst::Controller::ActionRole';
-    }
+    extends 'Catalyst::Controller:';
 
     ## Add the ActionRole to all the Controller's actions.  You can also
     ## selectively add the ActionRole with the :Does action attribute or in
@@ -97,7 +93,7 @@ Let's you require conditions on request query parameters (as you would access
 via C<< $ctx->request->query_parameters >>) as part of your dispatch matching.
 This ActionRole is not intended to be used for general HTML form and parameter
 processing or validation, for that purpose there are many other options (such
-as L<HTML::FormHandler>, L<Data::Manager> or <HTML::FormFu>.)  What it can be
+as L<HTML::FormHandler>, L<Data::Manager> or L<HTML::FormFu>.)  What it can be
 useful for is when you want to delegate work to various Actions inside your
 Controller based on what the incoming query parameters say.
 

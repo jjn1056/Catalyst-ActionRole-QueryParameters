@@ -12,7 +12,6 @@ test_requires 'Test::More' => '0.96';
 test_requires 'Moose';
 test_requires 'Catalyst';
 test_requires 'Catalyst::Test';
-test_requires 'Catalyst::Controller::ActionRole';
 test_requires 'HTTP::Request::Common';
 
 require 'maint/Makefile.PL.include'
