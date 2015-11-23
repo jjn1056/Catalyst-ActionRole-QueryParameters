@@ -24,6 +24,14 @@ has query_constraints => (
     my $compare = sub {
       my ($op, $cond) = @_;
 
+      if(defined $cond && length $cond && !defined $op) {
+        die "You must use a newer version of Catalyst (5.90090+) if you want to use Type Constraint '$cond'"
+          unless $self->can('resolve_type_constraint');
+        my ($tc) = $self->resolve_type_constraint($cond);
+        die "We think $cond is a type constraint, but its not" unless $tc;
+        return sub { $tc->check(shift) };
+      }
+
       if(defined $op) {
         die "No such op of $op" unless $op =~m/^(==|eq|!=|<=|>=|>|=~|<|gt|ge|lt|le)$/i;
         # we have an $op, make sure there's a comparator
@@ -44,6 +52,7 @@ has query_constraints => (
       return sub { my $v = shift; return defined($v) ? ($v lt $cond) : 0 } if $op eq 'lt';
       return sub { my $v = shift; return defined($v) ? ($v le $cond) : 0 } if $op eq 'le';
       return sub { my $v = shift; return defined($v) ? ($v eq $cond) : 0 } if $op eq 'eq';
+
       die "your op '$op' is not allowed!";
     };
 
@@ -70,18 +79,12 @@ has query_constraints => (
 around $_, sub {
   my ($orig, $self, $ctx, @more) = @_;
 
-  #use Devel::Dwarn;
-  #Dwarn $self->query_constraints;
-
   foreach my $constrained (keys %{$self->query_constraints}) {
-    #Dwarn $constrained;
-  #Dwarn $self->query_constraints->{$constrained};
-
     my ($not, $attr_param, $op, $cond, $evaluator) = @{$self->query_constraints->{$constrained}};
     my $req_value = exists($ctx->req->query_parameters->{$constrained}) ? 
       $ctx->req->query_parameters->{$constrained} : undef;
 
-    my $is_success = $evaluator->($req_value);
+    my $is_success = $evaluator->($req_value) ||0;
 
     if($ctx->debug) {
       my $display_req_value = defined($req_value) ? $req_value : 'undefined';
@@ -174,6 +177,7 @@ Here are some example C<QueryParam> attributes and the queries they match:
     QueryParam('page:==1')  ## 'page' must equal numeric one
     QueryParam('page:>1')  ## 'page' must be great than one
     QueryParam('!page:>1')  ## 'page' must NOT be great than one
+    QueryParam(page:Int) ## 'page' matches an Int constraint (see below)
 
 Since as I mentioned, it is generally not awesome web development practice to
 make excessive use of query parameters for mapping your action logic, I have
@@ -192,9 +196,42 @@ In addition, we support the regular expression match operator C<=~>. For
 documentation on Perl Relational Operators see: C<perldoc perlop>.  For 
 documentation on Perl Regular Expressions see C<perldoc perlre>.
 
+A C<$condition> may also be a L<Moose::Types> or similar type constraint.  See
+below for more.
+
 B<NOTE> For numeric comparisions we first check that the value 'looks_like_number'
 via L<Scalar::Util> before doing the comparison.  If it doesn't look like a
 number that is automatic fail.
+
+=head1 USING TYPE CONSTRAINTS
+
+To provide more flexibility and reuse in your parameter constraints, you may
+use types constraints as your constraint condition if you are using a recent
+build of L<Catalyst> (at least version 5.90090 or greater).  This allows you to
+use an imported type constraint, such as you might get from L<MooseX::Types> 
+or from L<Type::Tiny> or L<Types::Standard>.  For example:
+
+    package MyApp::Controller::Root;
+
+    use base 'Catalyst::Controller';
+    use Types::Standard 'Int';
+
+    sub root :Chained(/) PathPart('') CaptureArgs(0) { }
+
+      sub int :Chained(root) Args(0) QueryParam(page:Int) {
+        my ($self, $c) = @_;
+        $c->res->body('order');
+      }
+
+    MyApp::Controller::Root->config(
+      action_roles => ['QueryParameter'],
+    );
+
+This would require a URL with a 'page' query that is an Integer, for example,
+"https://localhost/int/100".
+
+This feature uses the type constraint resolution features built into the
+new versions of L<Catalyst> so it behaves the same way.
 
 =head1 USING CATALYST CONFIGURATION INSTEAD OF ATTRIBUTES
 
@@ -233,54 +270,8 @@ example above (that is not a typo!)
 
 =head1 NOTE REGARDING CATALYST DISPATCH RESOLUTION
 
-When several actions match the path of an incoming request, such as in the
-following example:
-
-    sub no_query : Path('foo') {
-      my ($self, $ctx) = @_;
-      $ctx->response->body('no_query');
-    }
-
-    sub page : Path('foo') QueryParam('page') {
-      my ($self, $ctx) = @_;
-      $ctx->response->body('page');
-    }
-
-L<Catayst> will call the C<match> method on each in turn until it finds one
-that returns a successful match.  This matching process starts from the
-bottom up (or last to first), which means that you should place your most
-specific matches at the bottom and your least specific or 'catch all' actions
-at the top.
-
-HOWEVER, if you are using Chained actions L<Catalyst::DispatchType::Chained>
-then the order resolution is REVERSED from the above example.  In other words
-we start with the first action and proceed downwards.  This means that when you
-are Chaining, you should place you most specific matches FIRST (nearest the top
-of the Controller file) and least specific or default actions LAST.
-
-For example:
-
-    sub root : Chained('/') PathPrefix CaptureArgs(0) {}
-
-      sub page_and_row
-      : Chained('root') PathPart('') QueryParam('page') QueryParam('row') Args(0)
-      {
-        my ($self, $ctx) = @_;
-        $ctx->response->body('page_and_row');
-      }
-
-      sub page : Chained('root') PathPart('')  QueryParam('page') Args(0)  {
-        my ($self, $ctx) = @_;
-        $ctx->response->body('page');
-      }
-
-      sub no_query : Chained('root') PathPart('') Args(0)  {
-        my ($self, $ctx) = @_;
-        $ctx->response->body('no_query');
-      }
-
-
-The test suite has a working example of this for your review.
+This document has been superceded by a new core documentation document.  Please
+see L<Catalyst::RouteMatching>.
 
 =head1 LIMITATIONS
 
@@ -288,7 +279,7 @@ Currently this only works for 'single' query parameters.  For example:
 
     ?foo=1&bar=2
 
-Not
+Not:
 
     ?foo=1&foo=2
 

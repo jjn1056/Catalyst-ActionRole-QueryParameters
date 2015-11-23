@@ -4,7 +4,11 @@ Revision history for Perl extension Catalyst::ActionRole::QueryParameter
         - Fixes from reported issues (contributors++)
         - Migration to Dist::Zilla
         - Conditions may now be Moose / Type::Tiny Types
-        - all constraints are now preloaded.
+        - All constraints are now preloaded.
+        - Better check for numeric constraints.  We now use Scalar::Util::looks_like_number
+          to make sure the value is a valid number for numeric comparisons.  This is a
+          possible breaking change if you relied on numeric comparisons for non numeric
+          data.
         - Improved tests
 
 0.06    05 May 2015
