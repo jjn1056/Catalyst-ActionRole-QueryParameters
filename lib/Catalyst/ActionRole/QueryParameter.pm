@@ -127,11 +127,17 @@ Catalyst::ActionRole::QueryParameter - Dispatch rules using query parameters
       action_roles => ['QueryParameter'],
     );
 
-    ## Match an incoming request matching "http://myhost/path?page"
+    ## Match an incoming request matching "http://myhost/path?page=1"
     sub paged_results : Path('foo') QueryParam('page') { ... }
 
     ## Match an incoming request matching "http://myhost/path"
     sub no_paging : Path('foo') QueryParam('!page') { ... }
+
+    ## Match a request using a type constraint
+
+    use Types::Standard 'Int';
+    sub an_int :Path('foo') QueryParam('page:Int') { ... }
+
 
 =head1 DESCRIPTION
 
