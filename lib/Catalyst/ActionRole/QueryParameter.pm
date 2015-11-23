@@ -1,60 +1,103 @@
 package Catalyst::ActionRole::QueryParameter;
 
-our $VERSION = '0.05';
-
-use 5.008008;
 use Moose::Role;
-use namespace::autoclean;
-
+use Scalar::Util ();
 requires 'attributes', 'match', 'match_captures';
+
+our $VERSION = '0.07';
 
 sub _resolve_query_attrs {
   @{shift->attributes->{QueryParam} || []};
 }
 
-around $_, sub {
-  my ($orig, $self, $ctx) = @_;
-  if(my @attrs = $self->_resolve_query_attrs) {
+has query_constraints => (
+  is=>'ro',
+  required=>1,
+  isa=>'HashRef',
+  lazy=>1,
+  builder=>'_prepare_query_constraints');
 
-    my @matched = grep { $_ } map {
-      my ($not, $attr_param, $op, $cond) =
-          ref($_) eq 'ARRAY' ?
-          ($_[0] eq '!' ? (@$_) :(0, @$_)) :
-          ($_=~m/^(\!?)([^\:]+)\:?(==|eq|!=|<=|>=|>|=~|<|gt|ge|lt|le)?(.*)$/);
+  sub _prepare_query_constraints {
+    my ($self) = @_;
 
-      my $req_param = $ctx->req->query_parameters->{$attr_param};
+    my @constraints;
+    my $compare = sub {
+      my ($op, $cond) = @_;
 
-      if($ctx->debug) {
-        $ctx->log->debug(
-          sprintf "QueryParam value for $self parsed as: %s %s %s %s",
-            ($not ? 'not' : 'is'), $attr_param, ($op ? $op:''), ($cond ? $cond:''),
-        );
-      }
-
-      if($req_param && $op && $cond) {
-        my $evaluated;
-        $cond = $op=~/eq|gt|ge|lt|le/ ? '"$cond"' : $cond;
-        my $success = eval "\$evaluated = $req_param $op $cond; 1";
-        if($success) {
-            $not ?! $evaluated : $evaluated;
-        } else {
-            $ctx->log->debug("Evaluating your QueryParam value generated an error: $@")
-              if $ctx->debug;
-            undef;
-        }
+      if(defined $op) {
+        die "No such op of $op" unless $op =~m/^(==|eq|!=|<=|>=|>|=~|<|gt|ge|lt|le)$/i;
+        # we have an $op, make sure there's a comparator
+        die "You can't have an operator without a target condition" unless defined($cond);
       } else {
-        $not ?!$req_param : $req_param;
+        # No op mean the field just need to exist with a defined value
+        return sub { defined(shift) };
       }
-    } @attrs;
 
-    if( scalar(@matched) == scalar(@attrs) ) {
-      return $self->$orig($ctx);
+      return sub { my $v = shift; return defined($v) ? (Scalar::Util::looks_like_number($v) && ($v == $cond)) : 0 } if $op eq '==';
+      return sub { my $v = shift; return defined($v) ? (Scalar::Util::looks_like_number($v) && ($v != $cond)) : 0 } if $op eq '!=';
+      return sub { my $v = shift; return defined($v) ? (Scalar::Util::looks_like_number($v) && ($v <= $cond)) : 0 } if $op eq '<=';
+      return sub { my $v = shift; return defined($v) ? (Scalar::Util::looks_like_number($v) && ($v >= $cond)) : 0 } if $op eq '>=';
+      return sub { my $v = shift; return defined($v) ? (Scalar::Util::looks_like_number($v) && ($v > $cond)) : 0 } if $op eq '>';
+      return sub { my $v = shift; return defined($v) ? (Scalar::Util::looks_like_number($v) && ($v < $cond)) : 0 } if $op eq '<';
+      return sub { my $v = shift; return defined($v) ? ($v =~ $cond) : 0 } if $op eq '=~';
+      return sub { my $v = shift; return defined($v) ? ($v ge $cond) : 0 } if $op eq 'ge';
+      return sub { my $v = shift; return defined($v) ? ($v lt $cond) : 0 } if $op eq 'lt';
+      return sub { my $v = shift; return defined($v) ? ($v le $cond) : 0 } if $op eq 'le';
+      return sub { my $v = shift; return defined($v) ? ($v eq $cond) : 0 } if $op eq 'eq';
+      die "your op '$op' is not allowed!";
+    };
+
+    if(my @attrs = $self->_resolve_query_attrs) {
+      my %matched = map {
+        my ($not, $attr_param, $op, $cond) =
+            ref($_) eq 'ARRAY' ?
+            ($_[0] eq '!' ? (@$_) :(0, @$_)) :
+            ($_=~m/^(\!?)([^\:]+)\:?(==|eq|!=|<=|>=|>|=~|<|gt|ge|lt|le)?(.*)$/);
+
+        my $evaluator = $compare->($op, $cond);
+
+        $attr_param => [ $not, $attr_param, $op, $cond, sub {
+          my $state = $evaluator->(shift);          
+          return $not ? not($state) : $state;
+        }];
+      } @attrs;
+      return \%matched;
     } else {
-      return 0;
+      return +{};
     }
-  } else {
-    return $self->$orig($ctx);
   }
+
+around $_, sub {
+  my ($orig, $self, $ctx, @more) = @_;
+
+  #use Devel::Dwarn;
+  #Dwarn $self->query_constraints;
+
+  foreach my $constrained (keys %{$self->query_constraints}) {
+    #Dwarn $constrained;
+  #Dwarn $self->query_constraints->{$constrained};
+
+    my ($not, $attr_param, $op, $cond, $evaluator) = @{$self->query_constraints->{$constrained}};
+    my $req_value = exists($ctx->req->query_parameters->{$constrained}) ? 
+      $ctx->req->query_parameters->{$constrained} : undef;
+
+    my $is_success = $evaluator->($req_value);
+
+    if($ctx->debug) {
+      my $display_req_value = defined($req_value) ? $req_value : 'undefined';
+      $ctx->log->debug(
+        sprintf "QueryParam value for action $self, param '$constrained' with value '$display_req_value' compared as: %s %s %s '%s'",
+          ($not ? 'not' : 'is'), $attr_param, ($op ? $op:''), ($cond ? $cond:''),
+      );
+      $ctx->log->debug("QueryParam for $self on key $constrained value $display_req_value has success of $is_success");
+    }
+
+    #If we fail once, game over;
+    return 0 unless $is_success;
+    
+  }
+  return $self->$orig($ctx, @more);
+  #If we get this far, its all good
 } for qw(match match_captures);
 
 1;
@@ -149,8 +192,9 @@ In addition, we support the regular expression match operator C<=~>. For
 documentation on Perl Relational Operators see: C<perldoc perlop>.  For 
 documentation on Perl Regular Expressions see C<perldoc perlre>.
 
-The condition will be wrapped in an C<eval> and any exceptions generated will
-be taken to mean the pattern has not matched.
+B<NOTE> For numeric comparisions we first check that the value 'looks_like_number'
+via L<Scalar::Util> before doing the comparison.  If it doesn't look like a
+number that is automatic fail.
 
 =head1 USING CATALYST CONFIGURATION INSTEAD OF ATTRIBUTES
 
@@ -238,6 +282,18 @@ For example:
 
 The test suite has a working example of this for your review.
 
+=head1 LIMITATIONS
+
+Currently this only works for 'single' query parameters.  For example:
+
+    ?foo=1&bar=2
+
+Not
+
+    ?foo=1&foo=2
+
+Patches welcomed!
+
 =head1 AUTHOR
 
 John Napiorkowski L<email:jjnapiork@cpan.org>
@@ -248,7 +304,7 @@ L<Catalyst>, L<Catalyst::Controller::ActionRole>, L<Moose>.
 
 =head1 COPYRIGHT & LICENSE
 
-Copyright 2011, John Napiorkowski L<email:jjnapiork@cpan.org>
+Copyright 2015, John Napiorkowski L<email:jjnapiork@cpan.org>
 
 This library is free software; you can redistribute it and/or modify it under
 the same terms as Perl itself.

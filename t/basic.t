@@ -35,8 +35,13 @@ is request(GET '/configuration?page=AAAA')->content, 'no_query';
 SKIP: {
   skip "Don't test match_catures on older Catalyst versions", 2
     unless eval "use Catalyst 5.90007; 1";
-  is request(GET '/matchcaptures/page')->content, 'no_page';
   is request(GET '/matchcaptures/page?page=1')->content, 'has_page';
+  is request(GET '/matchcaptures/page')->content, 'no_page';
 }
 
 done_testing;
+
+__END__
+
+
+
