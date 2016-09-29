@@ -4,7 +4,7 @@ use Moose::Role;
 use Scalar::Util ();
 requires 'attributes', 'match', 'match_captures';
 
-our $VERSION = '0.07';
+our $VERSION = '0.08';
 
 sub _resolve_query_attrs {
   @{shift->attributes->{QueryParam} || []};
@@ -61,13 +61,28 @@ has query_constraints => (
         my ($not, $attr_param, $op, $cond) =
             ref($_) eq 'ARRAY' ?
             ($_[0] eq '!' ? (@$_) :(0, @$_)) :
-            ($_=~m/^(\!?)([^\:]+)\:?(==|eq|!=|<=|>=|>|=~|<|gt|ge|lt|le)?(.*)$/);
+            ($_=~m/^([\?\!]?)([^\:]+)\:?(==|eq|!=|<=|>=|>|=~|<|gt|ge|lt|le)?(.*)$/);
 
         my $evaluator = $compare->($op, $cond);
 
+        my $default = undef;
+        if($attr_param =~m/=/) {
+          ($attr_param, $default) = split('=', $attr_param);
+        }
+
+        if($default and ($not eq '?')) {
+          die "Can't combine a default with an optional for action ${\$self->name}";
+        }
+
         $attr_param => [ $not, $attr_param, $op, $cond, sub {
-          my $state = $evaluator->(shift);          
-          return $not ? not($state) : $state;
+          my ($value, $ctx) = @_;
+          if(!defined($value)) {
+            $value = $default;
+            $ctx->req->query_parameters->{$attr_param} = $value;
+          }
+
+          my $state = $evaluator->($value);
+          return ($not eq '!') ? not($state) : $state;
         }];
       } @attrs;
       return \%matched;
@@ -81,16 +96,17 @@ around $_, sub {
 
   foreach my $constrained (keys %{$self->query_constraints}) {
     my ($not, $attr_param, $op, $cond, $evaluator) = @{$self->query_constraints->{$constrained}};
-    my $req_value = exists($ctx->req->query_parameters->{$constrained}) ? 
-      $ctx->req->query_parameters->{$constrained} : undef;
 
-    my $is_success = $evaluator->($req_value) ||0;
+    my $req_value = exists($ctx->req->query_parameters->{$constrained}) ? 
+      $ctx->req->query_parameters->{$constrained} : (($not eq '?') ? next : undef );
+
+    my $is_success = $evaluator->($req_value, $ctx) ||0;
 
     if($ctx->debug) {
       my $display_req_value = defined($req_value) ? $req_value : 'undefined';
       $ctx->log->debug(
         sprintf "QueryParam value for action $self, param '$constrained' with value '$display_req_value' compared as: %s %s %s '%s'",
-          ($not ? 'not' : 'is'), $attr_param, ($op ? $op:''), ($cond ? $cond:''),
+          (($not eq '!') ? 'not' : 'is'), $attr_param, ($op ? $op:''), ($cond ? $cond:''),
       );
       $ctx->log->debug("QueryParam for $self on key $constrained value $display_req_value has success of $is_success");
     }
@@ -138,6 +154,16 @@ Catalyst::ActionRole::QueryParameter - Dispatch rules using query parameters
     use Types::Standard 'Int';
     sub an_int :Path('foo') QueryParam('page:Int') { ... }
 
+    ## Match optionally (if the parameters exists it MUST pass the constraint
+    ## BUT it is allowed to not exist
+
+    use Types::Standard 'Int';
+    sub an_int :Path('foo') QueryParam('?page:Int') { ... }
+
+    ## Match with a default value if the query parameter does not exist'
+
+    sub with_path :Path('foo') QueryParam('?page=1') { ... }
+
 
 =head1 DESCRIPTION
 
@@ -179,22 +205,31 @@ aspects of L<Catalyst>.
 Here are some example C<QueryParam> attributes and the queries they match:
 
     QueryParam('page')  ## 'page' must exist
+    QueryParam('page=1') ## 'page' defaults to 1
     QueryParam('!page')  ## 'page' must NOT exist
+    QueryParam('?page')  ## 'page' may optionally exist
     QueryParam('page:==1')  ## 'page' must equal numeric one
     QueryParam('page:>1')  ## 'page' must be great than one
     QueryParam('!page:>1')  ## 'page' must NOT be great than one
     QueryParam(page:Int) ## 'page' matches an Int constraint (see below)
+    QueryParam('?page:Int')  ## 'page' may optionally exist, but if it does must be an Int
 
 Since as I mentioned, it is generally not awesome web development practice to
 make excessive use of query parameters for mapping your action logic, I have
 limited the condition matching to basic Perl operators.  The general pattern
 is as follows:
 
-    (!?)($parameter):?($condition?)
+    ([!?]?)($parameter):?($condition?)
 
 Which can be roughly translated as "A $parameter should match the $condition
 but we can tack a "!" to the front of the expression to reverse the match.  If
 you don't specify a $condition, the default condition is definedness."
+
+Please note your $parameter my define a simple default value using the '='
+operator.  This means your actual query parameter may not have a '=' in it.
+Patches to fix welcomed (it would probably be easy to provide some sort of escaping
+indicator).  Default may be combined with conditions, but you can't combine a
+defualt AND an optional '?' indicator (will cause an error).
 
 A C<$condition> is basically a Perl relational operator followed by a value.
 Relation Operators we current support: C<< ==,eq,>,<,!=,<=,>=,gt,ge,lt,le >>.
@@ -208,6 +243,9 @@ below for more.
 B<NOTE> For numeric comparisions we first check that the value 'looks_like_number'
 via L<Scalar::Util> before doing the comparison.  If it doesn't look like a
 number that is automatic fail.
+
+B<NOTE> The ? optional indicator is probably most useful when combined with a condition
+or/and a default.
 
 =head1 USING TYPE CONSTRAINTS
 

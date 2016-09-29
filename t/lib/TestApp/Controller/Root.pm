@@ -32,6 +32,21 @@ sub page_and_row : Path('foo') QueryParam('page') QueryParam('row') {
   $ctx->response->body('page_and_row');
 }
 
+sub optional_bar :Path('bar') QueryParam('?bar') {
+  my ($self, $ctx) = @_;
+  $ctx->response->body('optional_bar');
+}
+
+sub has_default : Path('has_default') QueryParam(default=foobar) {
+  my ($self, $ctx) = @_;
+  my $d = $ctx->req->query_parameters->{default};
+  $ctx->response->body("has_default: $d");
+}
+
+sub optional_num :Path('num') QueryParam('?num:>10') {
+  my ($self, $ctx) = @_;
+  $ctx->response->body('optional_num');
+}
 
 
 

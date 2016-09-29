@@ -39,9 +39,11 @@ SKIP: {
   is request(GET '/matchcaptures/page')->content, 'no_page';
 }
 
+is request(GET '/bar?bar=AAAA')->content, 'optional_bar';
+is request(GET '/bar')->content, 'optional_bar';
+is request(GET '/has_default?default=aaa')->content, 'has_default: aaa';
+is request(GET '/has_default')->content, 'has_default: foobar';
+is request(GET '/num?num=1000')->content, 'optional_num';
+is request(GET '/num')->content, 'optional_num';
+
 done_testing;
-
-__END__
-
-
-
